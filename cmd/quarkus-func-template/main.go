@@ -2,18 +2,19 @@ package main
 
 import (
 	"archive/zip"
-	"bufio"
 	"context"
 	"fmt"
-	"github.com/matejvasek/func-dynamic-tempates/lib"
 	"io"
-	fn "knative.dev/kn-plugin-func"
 	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
 	"strings"
 	"syscall"
+
+	"github.com/AlecAivazis/survey/v2"
+	"github.com/matejvasek/func-dynamic-tempates/lib"
+	fn "knative.dev/kn-plugin-func"
 )
 
 func main() {
@@ -86,32 +87,38 @@ func (q quarkusTemplate) Write(ctx context.Context, name, destDir string) error 
 	runtime := q.Runtime()
 	template := q.Name()
 
-	group := "org.acme"
-	artifact := name
-	if artifact == "" {
-		artifact = fmt.Sprintf("func-%s-%s", runtime, template)
-	}
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Fprintf(os.Stderr, "What group name use (default: %s)?", group)
-	text, err := reader.ReadString('\n')
-	if err != nil {
-		return err
-	}
-	g := strings.Trim(text, " \t\r\n")
-	if g != "" {
-		group = g
+	answers := struct {
+		Group, Artifact, BuildSystem string
+	}{
+		Group: "org.acme",
+		Artifact: name,
+		BuildSystem: "maven",
 	}
 
-	reader = bufio.NewReader(os.Stdin)
-	fmt.Fprintf(os.Stderr, "What artifact name use (default: %s)?", artifact)
-	text, err = reader.ReadString('\n')
-	if err != nil {
-		return err
+	if answers.Artifact == "" {
+		answers.Artifact = fmt.Sprintf("func-%s-%s", runtime, template)
 	}
-	a := strings.Trim(text, " \t\r\n")
-	if a != "" {
-		artifact = a
+
+	qs := []*survey.Question{
+		{
+			Name: "Group",
+			Prompt: &survey.Input{Message: fmt.Sprintf("What group name use (default: %s)?", answers.Group)},
+		},
+		{
+			Name: "Artifact",
+			Prompt: &survey.Input{Message: fmt.Sprintf("What artifact name use (default: %s)?", answers.Artifact)},
+		},
+		{
+			Name: "BuildSystem",
+			Prompt: &survey.Select{
+				Message: "What build system you want to use?",
+				Options: []string{"maven", "gradle"},
+				Default: "maven",
+			},
+		},
 	}
+
+	survey.Ask(qs, &answers)
 
 	var httpClient http.Client
 
@@ -120,9 +127,13 @@ func (q quarkusTemplate) Write(ctx context.Context, name, destDir string) error 
 		return err
 	}
 	query := req.URL.Query()
-	query.Add("g", group)
-	query.Add("a", artifact)
+	query.Add("g", answers.Group)
+	query.Add("a", answers.Artifact)
 	query.Add("cn", "code.quarkus.io")
+
+	if answers.BuildSystem == "gradle" {
+		query.Add("b", "GRADLE")
+	}
 
 	switch template {
 	case "http":
@@ -178,7 +189,7 @@ func (q quarkusTemplate) Write(ctx context.Context, name, destDir string) error 
 			"native":  "quay.io/boson/faas-quarkus-native-builder:v0.8.4",
 		},
 		HealthEndpoints: fn.HealthEndpoints{
-			Liveness: "/health/liveness",
+			Liveness:  "/health/liveness",
 			Readiness: "/health/readiness",
 		},
 	}.WriteConfig()
@@ -215,7 +226,6 @@ func unzip(src, dest string) error {
 		if len(parts) >= 1 {
 			nameWithoutFirstPart = filepath.Join(parts[1:]...)
 		}
-
 
 		if nameWithoutFirstPart == "" {
 			return nil
