@@ -36,7 +36,7 @@ then `func` can discover it and expose it to a user in a similar way the static 
 
 ## Go Helper Library
 
-To eases development of binaries satisfying [executable contract](#executable-contract) we will offer `Go` library.
+To ease development of binaries satisfying [executable contract](#executable-contract) we will offer `Go` library.
 
 The library is centered around
 [Repository](https://github.com/matejvasek/func-dynamic-templates/blob/main/lib/repository.go#L23) and
@@ -46,4 +46,4 @@ interfaces.
 Template author will not have to write all the boilerplate related to argument parsing or data serialization.
 All that is needed is to implement aforementioned interfaces and then pass it to the
 [`NewCommandFromRepository()`](https://github.com/matejvasek/func-dynamic-templates/blob/main/lib/repository.go#L56) function,
-and [use it](https://github.com/matejvasek/func-dynamic-templates/blob/main/cmd/quarkus-func-template/main.go) in `main()`.
+and [use it](https://github.com/matejvasek/func-dynamic-templates/blob/main/cmd/quarkus-func-template/main.go#L33) in `main()`.
