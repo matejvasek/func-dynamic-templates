@@ -89,24 +89,23 @@ func (q quarkusTemplate) Write(ctx context.Context, name, destDir string) error 
 
 	answers := struct {
 		Group, Artifact, BuildSystem string
-	}{
-		Group: "org.acme",
-		Artifact: name,
-		BuildSystem: "maven",
-	}
+	}{}
 
-	if answers.Artifact == "" {
-		answers.Artifact = fmt.Sprintf("func-%s-%s", runtime, template)
+	group := "org.acme"
+	artifact := name
+
+	if artifact == "" {
+		artifact = fmt.Sprintf("func-%s-%s", runtime, template)
 	}
 
 	qs := []*survey.Question{
 		{
-			Name: "Group",
-			Prompt: &survey.Input{Message: fmt.Sprintf("What group name use (default: %s)?", answers.Group)},
+			Name:   "Group",
+			Prompt: &survey.Input{Message: fmt.Sprintf("What group name use (default: %s)?", group)},
 		},
 		{
-			Name: "Artifact",
-			Prompt: &survey.Input{Message: fmt.Sprintf("What artifact name use (default: %s)?", answers.Artifact)},
+			Name:   "Artifact",
+			Prompt: &survey.Input{Message: fmt.Sprintf("What artifact name use (default: %s)?", artifact)},
 		},
 		{
 			Name: "BuildSystem",
@@ -118,7 +117,18 @@ func (q quarkusTemplate) Write(ctx context.Context, name, destDir string) error 
 		},
 	}
 
-	survey.Ask(qs, &answers)
+	err = survey.Ask(qs, &answers)
+	if err != nil {
+		return err
+	}
+
+	if answers.Group != "" {
+		group = answers.Group
+	}
+
+	if answers.Artifact != "" {
+		artifact = answers.Artifact
+	}
 
 	var httpClient http.Client
 
@@ -127,8 +137,8 @@ func (q quarkusTemplate) Write(ctx context.Context, name, destDir string) error 
 		return err
 	}
 	query := req.URL.Query()
-	query.Add("g", answers.Group)
-	query.Add("a", answers.Artifact)
+	query.Add("g", group)
+	query.Add("a", artifact)
 	query.Add("cn", "code.quarkus.io")
 
 	if answers.BuildSystem == "gradle" {
