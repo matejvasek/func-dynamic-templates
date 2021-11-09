@@ -18,17 +18,13 @@ func newRootCmd(repository Repository) (*cobra.Command, error) {
 
 	rootCmd.AddCommand(newListRuntimesCmd(repository))
 	rootCmd.AddCommand(newListTemplatesCmd(repository))
-	createCmd, err := newCreateCmd(repository)
-	if err != nil {
-		return nil, err
-	}
-	rootCmd.AddCommand(createCmd)
+	rootCmd.AddCommand(newCreateCmd(repository))
 	return &rootCmd, nil
 }
 
-func newCreateCmd(repository Repository) (*cobra.Command, error) {
+func newCreateCmd(repository Repository) *cobra.Command {
 	validTemplates := make(map[struct{ Runtime, Template string }]bool)
-	createCmd := &cobra.Command{
+	return &cobra.Command{
 		Use:   "create <func-spec-JSON>",
 		Short: "Create a func project for template",
 		Args:  cobra.ExactArgs(1),
@@ -77,7 +73,6 @@ func newCreateCmd(repository Repository) (*cobra.Command, error) {
 		},
 	}
 
-	return createCmd, nil
 }
 
 func newListRuntimesCmd(repository Repository) *cobra.Command {
